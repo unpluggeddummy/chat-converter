@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채팅 변환기 — txt → 티스토리</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --surface2: #f4f2ef;
+  --border: #e8e4de;
+  --border2: #d4cfc8;
+  --text: #1a1814;
+  --text2: #6b6560;
+  --text3: #a09890;
+  --accent: #2c2a27;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Header ──────────────────────────────── */
+header {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+header h1 { font-size: 16px; font-weight: 500; letter-spacing: -0.3px; }
+header p { font-size: 12px; color: var(--text3); margin-top: 1px; }
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+}
+
+/* ── Layout ──────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100vh - 65px);
+}
+
+/* ── Panel (left) ────────────────────────── */
+.panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Section labels ──────────────────────── */
+.sec {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: -6px;
+}
+
+/* ── Hint box ────────────────────────────── */
+.hint {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 11.5px;
+  color: var(--text2);
+  line-height: 1.85;
+}
+.hint code {
+  background: var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-family: 'SF Mono', monospace;
+}
+
+/* ── Upload zone ─────────────────────────── */
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: background .15s, border-color .15s;
+  background: var(--surface2);
+}
+.upload-zone:hover { background: #ede9e3; border-color: var(--border2); }
+.upload-zone.drag { background: #f0ece8; border-color: #b8a898; }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { font-size: 24px; }
+.upload-label { font-size: 13px; font-weight: 500; }
+.upload-sub { font-size: 11px; color: var(--text3); }
+
+.file-badge {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.file-badge span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-badge button {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 14px; line-height: 1;
+}
+.file-badge button:hover { color: var(--text); }
+
+/* ── Divider ─────────────────────────────── */
+.or-divider {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; color: var(--text3);
+}
+.or-divider::before,.or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Inputs ──────────────────────────────── */
+textarea, select {
+  width: 100%; font-size: 13px; padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: border-color .15s;
+}
+textarea { resize: vertical; min-height: 100px; font-size: 12px; line-height: 1.55; }
+textarea:focus, select:focus { border-color: var(--border2); }
+
+/* ── Profile row ─────────────────────────── */
+.profile-row { display: flex; align-items: center; gap: 10px; }
+.av {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px dashed var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; cursor: pointer; flex-shrink: 0;
+  background: var(--surface2); position: relative; overflow: hidden;
+  transition: border-color .15s;
+}
+.av:hover { border-color: var(--text3); }
+.av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; position: absolute; inset: 0; }
+.av input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+.pinfo { flex: 1; }
+
+/* ── Swatches ────────────────────────────── */
+.sw-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.sw {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; border: 2.5px solid transparent;
+  transition: border-color .12s, transform .1s;
+  flex-shrink: 0;
+}
+.sw:hover { transform: scale(1.1); }
+.sw.on { border-color: var(--text); }
+
+/* ── Hex inputs ──────────────────────────── */
+.hex-item {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.hex-item label { font-size: 11px; color: var(--text3); }
+.hex-item-row {
+  display: flex; align-items: center; gap: 5px;
+}
+.hex-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  flex-shrink: 0; border: 1px solid var(--border2);
+}
+.hex-inp {
+  flex: 1; font-size: 12px; padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+.hex-inp:focus { border-color: var(--border2); }
+
+/* ── URL row ─────────────────────────────── */
+.url-row { display: flex; flex-direction: column; gap: 4px; margin-top: -4px; }
+.url-row label { font-size: 11px; color: var(--text3); }
+.url-input-row { display: flex; align-items: center; gap: 5px; }
+.url-input-row input {
+  flex: 1; font-size: 12px; padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: 'Noto Sans KR', sans-serif;
+  min-width: 0;
+}
+.url-input-row input:focus { border-color: var(--border2); }
+.url-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 13px; padding: 2px 4px; flex-shrink: 0;
+}
+.url-clear:hover { color: var(--text); }
+.apply-btn {
+  width: 100%;
+  padding: 7px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: background .15s;
+}
+.apply-btn:hover { background: var(--surface2); }
+
+/* ── Preview pair ────────────────────────── */
+.preview-pair { display: flex; gap: 8px; align-items: center; }
+.pair-bub { padding: 5px 12px; border-radius: 14px; font-size: 12px; }
+
+/* ── Main button ─────────────────────────── */
+.btn-main {
+  width: 100%; padding: 11px;
+  background: var(--accent);
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  font-size: 14px; font-weight: 500;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  letter-spacing: -0.2px;
+  transition: opacity .15s;
+}
+.btn-main:hover { opacity: .85; }
+
+/* ── Preview (right) ─────────────────────── */
+.preview-area {
+  background: var(--bg);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#htmlPanel { display: none; }
+.pt {
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.pt-left { display: flex; flex-direction: column; gap: 2px; }
+.pt-title { font-size: 14px; font-weight: 500; }
+.pt-count { font-size: 11px; color: var(--text3); }
+.btn-copy {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-family: 'Noto Sans KR', sans-serif;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: background .15s;
+  display: none;
+}
+.btn-copy:hover { background: var(--surface2); }
+
+.chat-window {
+  flex: 1; overflow-y: auto; padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+/* ── Chat UI ─────────────────────────────── */
+.date-chip {
+  font-size: 11px; color: var(--text3);
+  margin: 12px auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 14px;
+  align-self: center;
+}
+.row-me { display: flex; justify-content: flex-end; align-items: flex-start; gap: 7px; margin-bottom: 3px; }
+.row-other { display: flex; flex-direction: row; align-items: flex-start; gap: 9px; margin-bottom: 3px; }
+.bub {
+  padding: 9px 14px; font-size: 14px; line-height: 1.6;
+  word-break: break-word; white-space: pre-wrap;
+  text-align: justify; text-align-last: left;
+  min-width: 2em; max-width: 220px; width: fit-content;
+}
+.bub-me { border-radius: 18px 18px 4px 18px; }
+.bub-other { border-radius: 18px 18px 18px 4px; }
+.t { font-size: 10px; color: var(--text3); padding-bottom: 2px; white-space: nowrap; flex-shrink: 0; }
+.nm { font-size: 11px; color: var(--text2); margin-bottom: 3px; padding-left: 2px; }
+.av-sm {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: var(--surface2); display: flex; align-items: center;
+  justify-content: center; font-size: 14px; overflow: hidden;
+}
+.av-sm img { width: 100%; height: 100%; object-fit: cover; }
+.other-col { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.other-inner { display: flex; flex-direction: row; align-items: flex-end; gap: 6px; }
+.me-col { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; max-width: calc(100% - 48px); }
+.me-inner { display: flex; flex-direction: row; align-items: flex-end; gap: 7px; justify-content: flex-end; }
+.nm-me { text-align: right; padding-right: 2px; padding-left: 0; }
+
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px;
+  color: var(--text3); font-size: 13px;
+  flex: 1; min-height: 300px;
+}
+.empty-icon { font-size: 36px; opacity: .5; }
+
+.detected {
+  font-size: 12px; color: var(--text2);
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 7px 12px; border-radius: var(--radius-sm); display: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>채팅 변환기</h1>
+    <p>txt 파일 → 채팅 UI → 티스토리 HTML</p>
+  </div>
+  <span class="badge">밴드 · 카카오톡 · 디스코드 지원</span>
+</header>
+
+<div class="layout">
+  <!-- ── 왼쪽 패널 ── -->
+  <div class="panel">
+    <div class="panel-body">
+
+      <div class="hint">
+        <b>지원 형식</b><br>
+        · 밴드: <code>이름</code> / <code>내용</code> / <code>3월 19일 오후 10:17</code><br>
+        · 카카오: <code>[이름] [오전/오후 시:분] 메시지</code><br>
+        · 디스코드: <code>이름 — 2026. 2. 7. 오전 1:42</code><br>
+        · 단순: <code>이름 메시지</code>
+      </div>
+
+      <div class="sec">txt 파일 업로드</div>
+      <div class="upload-zone" id="uploadZone"
+        ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <input type="file" accept=".txt,text/plain" onchange="onFileSelect(this)">
+        <div class="upload-icon">📂</div>
+        <div class="upload-label">파일을 끌어다 놓거나 클릭</div>
+        <div class="upload-sub">.txt · 대용량 가능</div>
+      </div>
+      <div id="fileBadge" class="file-badge">
+        <span id="fileName"></span>
+        <button onclick="clearFile()">✕</button>
+      </div>
+
+      <div class="or-divider">또는 직접 붙여넣기</div>
+      <textarea id="txtInput" placeholder="대화 내용을 붙여넣으세요..."></textarea>
+      <div id="detectedBox" class="detected">감지된 이름: <span id="nameList"></span></div>
+
+      <div class="sec">내 이름 (오른쪽 버블)</div>
+      <div class="profile-row">
+        <div class="av" id="avA-wrap"><span id="avA-icon">😊</span><input type="file" accept="image/*" onchange="loadAv('A',this)"></div>
+        <div class="pinfo">
+          <select id="nameA" onchange="reRender()"><option value="">-- 내 이름 선택 --</option></select>
+        </div>
+      </div>
+      <div class="url-row">
+        <label>이미지 URL (Imgur 등)</label>
+        <div class="url-input-row">
+          <input type="text" id="urlA" placeholder="https://i.imgur.com/xxxxx.jpg" oninput="onUrlInput('A')">
+          <button class="url-clear" onclick="clearUrl('A')">✕</button>
+        </div>
+      </div>
+
+      <div class="sec">상대방 이름 (왼쪽 버블)</div>
+      <div class="profile-row">
+        <div class="av" id="avB-wrap"><span id="avB-icon">🌿</span><input type="file" accept="image/*" onchange="loadAv('B',this)"></div>
+        <div class="pinfo">
+          <select id="nameB" onchange="reRender()"><option value="">-- 상대방 이름 선택 --</option></select>
+        </div>
+      </div>
+      <div class="url-row">
+        <label>이미지 URL (Imgur 등)</label>
+        <div class="url-input-row">
+          <input type="text" id="urlB" placeholder="https://i.imgur.com/xxxxx.jpg" oninput="onUrlInput('B')">
+          <button class="url-clear" onclick="clearUrl('B')">✕</button>
+        </div>
+      </div>
+
+      <div class="sec">버블 색상</div>
+      <div class="sw-row" id="swatches"></div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="hex-item">
+          <label>나 버블</label>
+          <div class="hex-item-row">
+            <div class="hex-dot" id="hDotMe"></div>
+            <input class="hex-inp" id="hexMe" type="text" placeholder="#F4B8C8" maxlength="7" oninput="onHexInput('me')" style="width:100%">
+          </div>
+        </div>
+        <div class="hex-item">
+          <label>나 텍스트</label>
+          <div class="hex-item-row">
+            <div class="hex-dot" id="hDotTxtMe"></div>
+            <input class="hex-inp" id="hexTxtMe" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtMe')" style="width:100%">
+          </div>
+        </div>
+        <div class="hex-item">
+          <label>상대 버블</label>
+          <div class="hex-item-row">
+            <div class="hex-dot" id="hDotOther"></div>
+            <input class="hex-inp" id="hexOther" type="text" placeholder="#FCDFE7" maxlength="7" oninput="onHexInput('other')" style="width:100%">
+          </div>
+        </div>
+        <div class="hex-item">
+          <label>상대 텍스트</label>
+          <div class="hex-item-row">
+            <div class="hex-dot" id="hDotTxtOther"></div>
+            <input class="hex-inp" id="hexTxtOther" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtOther')" style="width:100%">
+          </div>
+        </div>
+      </div>
+      <button class="apply-btn" onclick="applyHex()">색상 적용</button>
+
+      <div class="preview-pair">
+        <div class="pair-bub" id="prevOther">상대방</div>
+        <div class="pair-bub" id="prevMe">나</div>
+      </div>
+
+      <button class="btn-main" onclick="convert()">채팅 UI로 변환</button>
+    </div>
+  </div>
+
+  <!-- ── 오른쪽 미리보기 ── -->
+  <div class="preview-area">
+    <div class="pt">
+      <div class="pt-left">
+        <span class="pt-title">미리보기</span>
+        <div class="pt-count" id="msgCount"></div>
+      </div>
+      <button class="btn-copy" id="copyBtn" onclick="copyTistory()">티스토리 HTML 복사</button>
+    </div>
+    <div class="chat-window" id="chatWindow">
+      <div class="empty">
+        <div class="empty-icon">💬</div>
+        <div>파일 업로드 또는 텍스트 붙여넣기 후 변환 버튼 클릭</div>
+      </div>
+    </div>
+    <!-- HTML 출력 패널 -->
+    <div id="htmlPanel" style="display:none;flex-direction:column;border-top:1px solid var(--border);background:var(--surface);">
+      <div style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+        <span style="font-size:12px;color:var(--text2);">생성된 HTML — 아래 전체 선택 후 복사 (Ctrl+A → Ctrl+C)</span>
+        <button onclick="selectAll()" style="font-size:12px;padding:5px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">전체 선택</button>
+      </div>
+      <textarea id="htmlOutput" readonly
+        style="flex:1;min-height:160px;max-height:220px;padding:12px 16px;font-size:11px;font-family:'SF Mono','Menlo',monospace;line-height:1.55;border:none;outline:none;resize:none;background:var(--surface2);color:var(--text2);"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const PALETTES=[
+  {me:'#F4B8C8',other:'#FCDFE7'},
+  {me:'#B8D4F4',other:'#DDEDFB'},
+  {me:'#B8EAD4',other:'#DCF5EA'},
+  {me:'#D0B8F4',other:'#E8DCFB'},
+  {me:'#F4D8B8',other:'#FBF0DC'},
+  {me:'#F4F0B8',other:'#FAFADC'},
+];
+let pal={me:'#F4B8C8',other:'#FCDFE7',txtMe:null,txtOther:null};
+const avData={A:null,B:null};
+let parsedMsgs=[];
+let detectedNames=[];
+let rawText='';
+
+function isDark(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000<140;}
+function darken(h,a){return'#'+[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)].map(v=>Math.round(v*a).toString(16).padStart(2,'0')).join('');}
+function autoTxtColor(hex){return isDark(hex)?'#ffffff':darken(hex,0.42);}
+function getTxtMe(){return pal.txtMe||autoTxtColor(pal.me);}
+function getTxtOther(){return pal.txtOther||autoTxtColor(pal.other);}
+
+function updatePalPrev(){
+  document.getElementById('prevMe').style.cssText=`background:${pal.me};color:${getTxtMe()}`;
+  document.getElementById('prevOther').style.cssText=`background:${pal.other};color:${getTxtOther()}`;
+  document.getElementById('hDotMe').style.background=pal.me;
+  document.getElementById('hDotOther').style.background=pal.other;
+  document.getElementById('hDotTxtMe').style.background=getTxtMe();
+  document.getElementById('hDotTxtOther').style.background=getTxtOther();
+}
+
+function initSwatches(){
+  const row=document.getElementById('swatches');
+  PALETTES.forEach((p,i)=>{
+    const sw=document.createElement('div');
+    sw.className='sw'+(i===0?' on':'');
+    sw.style.background=p.me;
+    sw.style.boxShadow=`inset 0 0 0 6px ${p.other}`;
+    sw.onclick=()=>{
+      document.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));
+      sw.classList.add('on');
+      pal.me=p.me;pal.other=p.other;pal.txtMe=null;pal.txtOther=null;
+      ['hexMe','hexOther','hexTxtMe','hexTxtOther'].forEach(id=>document.getElementById(id).value='');
+      updatePalPrev();
+      if(parsedMsgs.length)renderChat(parsedMsgs);
+    };
+    row.appendChild(sw);
+  });
+  updatePalPrev();
+}
+
+function onHexInput(w){
+  const ids={me:'hexMe',other:'hexOther',txtMe:'hexTxtMe',txtOther:'hexTxtOther'};
+  const dots={me:'hDotMe',other:'hDotOther',txtMe:'hDotTxtMe',txtOther:'hDotTxtOther'};
+  let v=document.getElementById(ids[w]).value.trim();
+  if(!v.startsWith('#'))v='#'+v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById(dots[w]).style.background=v;
+}
+function applyHex(){
+  const get=id=>{let v=document.getElementById(id).value.trim();if(!v)return null;return v.startsWith('#')?v:'#'+v;};
+  const me=get('hexMe'),other=get('hexOther'),tm=get('hexTxtMe'),to=get('hexTxtOther');
+  const valid=v=>!v||/^#[0-9a-fA-F]{6}$/.test(v);
+  if(!valid(me)||!valid(other)||!valid(tm)||!valid(to)){alert('올바른 헥사코드를 입력해 주세요.\n예: #F4B8C8');return;}
+  if(me)pal.me=me;if(other)pal.other=other;
+  pal.txtMe=tm||null;pal.txtOther=to||null;
+  document.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));
+  updatePalPrev();
+  if(parsedMsgs.length)renderChat(parsedMsgs);
+}
+
+function onDragOver(e){e.preventDefault();document.getElementById('uploadZone').classList.add('drag');}
+function onDragLeave(){document.getElementById('uploadZone').classList.remove('drag');}
+function onDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)readFile(f);}
+function onFileSelect(input){const f=input.files[0];if(f)readFile(f);}
+function readFile(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    rawText=e.target.result;
+    document.getElementById('txtInput').value='';
+    const sz=file.size<1048576?(file.size/1024).toFixed(1)+'KB':(file.size/1048576).toFixed(1)+'MB';
+    document.getElementById('fileName').textContent=file.name+' ('+sz+')';
+    document.getElementById('fileBadge').style.display='flex';
+    autoDetect(rawText);
+  };
+  r.readAsText(file,'utf-8');
+}
+function clearFile(){rawText='';document.getElementById('fileBadge').style.display='none';document.getElementById('uploadZone').querySelector('input').value='';}
+document.getElementById('txtInput').addEventListener('input',function(){rawText='';if(this.value.trim().length>10)autoDetect(this.value);});
+function autoDetect(txt){
+  parseTxt(txt);
+  if(detectedNames.length>=1&&!document.getElementById('nameA').value)document.getElementById('nameA').value=detectedNames[0];
+  if(detectedNames.length>=2&&!document.getElementById('nameB').value)document.getElementById('nameB').value=detectedNames[1];
+}
+
+function parseTxt(txt){
+  const lines=txt.split('\n').map(l=>l.trimEnd());
+  const reKakao=/^\[(.+?)\]\s*\[(오전|오후)\s*(\d{1,2}:\d{2})\]\s*([\s\S]*)$/;
+  const reDiscord=/^(.+?)\s*[—–-]\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}:\d{2})\s*$/;
+  const reBandDate=/^(?:(\d{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)\s*(\d{1,2}:\d{2})\s*$/;
+
+  const nameSet=new Set();
+  lines.forEach(l=>{
+    let m=l.match(reKakao);if(m)nameSet.add(m[1].trim());
+    m=l.match(reDiscord);if(m)nameSet.add(m[1].trim());
+  });
+
+  const bandDateIdx=new Set();
+  lines.forEach((l,i)=>{if(reBandDate.test(l))bandDateIdx.add(i);});
+  const bandBlocks=[];
+  const skipLines=new Set();
+  bandDateIdx.forEach(di=>{
+    if(di<2)return;
+    let contentLines=[];let j=di-1;
+    while(j>=0&&lines[j].trim()!==''){contentLines.unshift(lines[j]);j--;}
+    if(contentLines.length>=2){
+      const name=contentLines[0].trim();
+      const content=contentLines.slice(1).join('\n');
+      if(name&&content){nameSet.add(name);bandBlocks.push({nameIdx:j+1,dateIdx:di,name,content});}
+    }
+  });
+
+  const wc={};
+  lines.forEach(l=>{const w=l.trim().split(/\s+/)[0];if(w)wc[w]=(wc[w]||0)+1;});
+  Object.entries(wc).forEach(([w,c])=>{if(c>=2&&w.length<=8&&!/^\d/.test(w)&&!w.includes('월'))nameSet.add(w);});
+  detectedNames=[...nameSet];
+  updateNameSelects();
+
+  const msgs=[];
+  bandBlocks.forEach(b=>{
+    const dm=lines[b.dateIdx].match(reBandDate);if(!dm)return;
+    const year=dm[1]||new Date().getFullYear().toString();
+    const date=`${year}년${dm[2]}월${dm[3]}일`;
+    const ampm=dm[4],time=dm[5];
+    b.content.split('\n').map(s=>s.trim()).filter(s=>s).forEach(part=>{
+      msgs.push({date,ampm,time,name:b.name,text:part});
+    });
+    for(let k=b.nameIdx;k<=b.dateIdx;k++)skipLines.add(k);
+  });
+
+  let cur=null;let discordMode=false;
+  for(let i=0;i<lines.length;i++){
+    if(skipLines.has(i))continue;
+    const l=lines[i];
+    let m=l.match(reKakao);
+    if(m){
+      if(cur)flushMsg(msgs,cur);discordMode=false;
+      cur={date:'',ampm:m[2],time:m[3],name:m[1].trim(),text:m[4].trimEnd(),lines:[]};continue;
+    }
+    m=l.match(reDiscord);
+    if(m){
+      if(cur)flushMsg(msgs,cur);
+      const date=`${m[2]}년${m[3]}월${m[4]}일`;
+      cur={date,ampm:m[5],time:m[6],name:m[1].trim(),text:'',lines:[]};discordMode=true;continue;
+    }
+    if(discordMode&&cur){
+      if(l.trim()===''){discordMode=false;continue;}
+      if(!l.match(reDiscord)&&!l.match(reKakao)){cur.lines.push(l);continue;}
+    }
+    const parts=l.trim().split(/\s+/);
+    if(parts.length>=2&&nameSet.has(parts[0])){
+      if(cur)flushMsg(msgs,cur);discordMode=false;
+      cur={date:'',ampm:'',time:'',name:parts[0],text:parts.slice(1).join(' '),lines:[]};continue;
+    }
+    if(cur&&l.trim())cur.lines.push(l);
+  }
+  if(cur)flushMsg(msgs,cur);
+
+  const finalMsgs=[];
+  msgs.forEach(msg=>{
+    const fullText=(msg.text+(msg.lines&&msg.lines.length?'\n'+msg.lines.join('\n'):'')).trim();
+    const parts=fullText.split('\n').map(s=>s.trim()).filter(s=>s);
+    if(!parts.length)return;
+    parts.forEach((p,pi)=>finalMsgs.push({date:pi===0?msg.date:'',ampm:msg.ampm,time:msg.time,name:msg.name,text:p}));
+  });
+  let lastD='';
+  finalMsgs.forEach(m=>{if(m.date)lastD=m.date;else m.date=lastD;});
+  parsedMsgs=finalMsgs;
+  return finalMsgs;
+}
+
+function flushMsg(msgs,cur){msgs.push(cur);}
+
+function updateNameSelects(){
+  ['nameA','nameB'].forEach(id=>{
+    const sel=document.getElementById(id);const prev=sel.value;
+    sel.innerHTML='<option value="">-- 선택 --</option>';
+    detectedNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;if(n===prev)o.selected=true;sel.appendChild(o);});
+  });
+  const box=document.getElementById('detectedBox');
+  if(detectedNames.length){box.style.display='block';document.getElementById('nameList').textContent=detectedNames.join(', ');}
+}
+
+function loadAv(p,input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{ avData[p]=e.target.result; setAvPreview(p,e.target.result); if(parsedMsgs.length)renderChat(parsedMsgs); };
+  r.readAsDataURL(file);
+}
+
+function onUrlInput(p){
+  const url=document.getElementById('url'+p).value.trim();
+  if(!url){clearUrl(p);return;}
+  avData[p]=url;
+  setAvPreview(p,url);
+  if(parsedMsgs.length)renderChat(parsedMsgs);
+}
+
+function clearUrl(p){
+  document.getElementById('url'+p).value='';
+  avData[p]=null;
+  const wrap=document.getElementById('av'+p+'-wrap');
+  const img=wrap.querySelector('img');
+  if(img)img.remove();
+  document.getElementById('av'+p+'-icon').style.display='';
+  if(parsedMsgs.length)renderChat(parsedMsgs);
+}
+
+function setAvPreview(p,src){
+  const wrap=document.getElementById('av'+p+'-wrap');
+  document.getElementById('av'+p+'-icon').style.display='none';
+  let img=wrap.querySelector('img');
+  if(!img){img=document.createElement('img');wrap.insertBefore(img,wrap.querySelector('input'));}
+  img.src=src;
+  img.onerror=()=>{img.remove();document.getElementById('av'+p+'-icon').style.display='';avData[p]=null;alert('이미지를 불러올 수 없어요.\nURL을 다시 확인해 주세요.');};
+}
+
+function convert(){
+  const src=rawText||document.getElementById('txtInput').value.trim();
+  if(!src){alert('파일을 업로드하거나 텍스트를 붙여넣어 주세요!');return;}
+  parseTxt(src);
+  if(!parsedMsgs.length){alert('메시지를 인식하지 못했습니다.\n형식을 확인해 주세요.');return;}
+  if(!document.getElementById('nameA').value){alert('내 이름을 선택해 주세요.');return;}
+  renderChat(parsedMsgs);
+  document.getElementById('copyBtn').style.display='block';
+  document.getElementById('msgCount').textContent=parsedMsgs.length.toLocaleString()+'개 버블';
+}
+function reRender(){if(parsedMsgs.length)renderChat(parsedMsgs);}
+
+function renderChat(msgs){
+  const nameA=document.getElementById('nameA').value;
+  const win=document.getElementById('chatWindow');
+  const frag=document.createDocumentFragment();
+  let lastDate='';
+  msgs.forEach(msg=>{
+    if(!msg.text.trim())return;
+    const isMe=msg.name===nameA;
+    if(msg.date&&msg.date!==lastDate){
+      const d=document.createElement('div');d.className='date-chip';d.textContent=msg.date;frag.appendChild(d);lastDate=msg.date;
+    }
+    const row=document.createElement('div');
+    if(isMe){
+      row.className='row-me';
+      // 구조: [me-col(이름 + [시간, 버블])] [아바타]
+      const meCol=document.createElement('div');meCol.className='me-col';
+      const meNm=document.createElement('div');meNm.className='nm nm-me';meNm.textContent=msg.name;
+      const meInner=document.createElement('div');meInner.className='me-inner';
+      const t=document.createElement('div');t.className='t';t.textContent=msg.ampm?(msg.ampm+' '+msg.time):'';
+      const bub=document.createElement('div');bub.className='bub bub-me';
+      bub.style.background=pal.me;bub.style.color=getTxtMe();bub.textContent=msg.text;
+      meInner.appendChild(t);meInner.appendChild(bub);
+      meCol.appendChild(meNm);meCol.appendChild(meInner);
+      row.appendChild(meCol);row.appendChild(mkAv('A'));
+    } else {
+      row.className='row-other';
+      const col=document.createElement('div');col.className='other-col';
+      const nm=document.createElement('div');nm.className='nm';nm.textContent=msg.name;
+      const inner=document.createElement('div');inner.className='other-inner';
+      const bub=document.createElement('div');bub.className='bub bub-other';
+      bub.style.background=pal.other;bub.style.color=getTxtOther();bub.textContent=msg.text;
+      const t=document.createElement('div');t.className='t';t.textContent=msg.ampm?(msg.ampm+' '+msg.time):'';
+      inner.appendChild(bub);inner.appendChild(t);col.appendChild(nm);col.appendChild(inner);
+      row.appendChild(mkAv('B'));row.appendChild(col);
+    }
+    frag.appendChild(row);
+  });
+  win.innerHTML='';win.appendChild(frag);
+}
+
+function mkAv(p){
+  const el=document.createElement('div');el.className='av-sm';
+  if(avData[p]){const img=document.createElement('img');img.src=avData[p];el.appendChild(img);}
+  else el.textContent=p==='A'?'😊':'🌿';
+  return el;
+}
+
+function buildHTML(){
+  const nameA=document.getElementById('nameA').value||'나';
+  const avA=avData.A?`<img src="${avData.A}" style="width:30px;height:30px;border-radius:50%;object-fit:cover">`:`<span style="font-size:13px">😊</span>`;
+  const avB=avData.B?`<img src="${avData.B}" style="width:30px;height:30px;border-radius:50%;object-fit:cover">`:`<span style="font-size:13px">🌿</span>`;
+  const avW=i=>`<div style="width:30px;height:30px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">${i}</div>`;
+  const base=`font-size:14px;line-height:1.6;word-break:break-word;white-space:pre-wrap;text-align:justify;text-align-last:left;`;
+  const bMe=`${base}padding:9px 14px;border-radius:18px 18px 4px 18px;background:${pal.me};color:${getTxtMe()};max-width:68%;display:inline-block;`;
+  const bOt=`${base}padding:9px 14px;border-radius:18px 18px 18px 4px;background:${pal.other};color:${getTxtOther()};max-width:68%;display:inline-block;`;
+  let rows='';let lastDate='';
+  parsedMsgs.forEach(msg=>{
+    if(!msg.text.trim())return;
+    const isMe=msg.name===nameA;
+    const esc=msg.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if(msg.date&&msg.date!==lastDate){
+      rows+=`<div style="text-align:center;margin:12px 0"><span style="font-size:11px;color:#999;background:#f5f5f5;padding:3px 14px;border-radius:20px">${msg.date}</span></div>`;
+      lastDate=msg.date;
+    }
+    const t=msg.ampm?(msg.ampm+' '+msg.time):'';
+    if(isMe){
+      rows+=`<div style="display:flex;justify-content:flex-end;align-items:flex-start;gap:7px;margin-bottom:4px"><div style="display:flex;flex-direction:column;align-items:flex-end;max-width:calc(100% - 48px)"><div style="font-size:11px;color:#999;margin-bottom:3px;padding-right:2px;text-align:right">${nameA}</div><div style="display:flex;flex-direction:row;align-items:flex-end;gap:7px;justify-content:flex-end"><div style="font-size:10px;color:#aaa;padding-bottom:2px">${t}</div><div style="${bMe}">${esc}</div></div></div>${avW(avA)}</div>`;
+    } else {
+      rows+=`<div style="display:flex;flex-direction:row;align-items:flex-start;gap:9px;margin-bottom:4px">${avW(avB)}<div style="display:flex;flex-direction:column;align-items:flex-start"><div style="font-size:11px;color:#999;margin-bottom:3px">${msg.name}</div><div style="display:flex;flex-direction:row;align-items:flex-end;gap:6px"><div style="${bOt}">${esc}</div><div style="font-size:10px;color:#aaa;padding-bottom:2px">${t}</div></div></div></div>`;
+    }
+  });
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;max-width:600px;margin:0 auto;padding:20px">\n${rows}\n</div>`;
+}
+
+function showHtmlPanel(html){
+  const panel=document.getElementById('htmlPanel');
+  const output=document.getElementById('htmlOutput');
+  panel.style.display='flex';
+  panel.style.flexDirection='column';
+  output.value=html;
+  output.select();
+  output.scrollIntoView({behavior:'smooth',block:'end'});
+}
+
+function copyTistory(){
+  const html=buildHTML();
+  const btn=document.getElementById('copyBtn');
+  // clipboard API 시도 → 실패하면 textarea 폴백
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(html).then(()=>{
+      btn.textContent='✓ 복사됨';
+      setTimeout(()=>btn.textContent='티스토리 HTML 복사',2000);
+      showHtmlPanel(html);
+    }).catch(()=>fallbackCopy(html));
+  } else {
+    fallbackCopy(html);
+  }
+}
+
+function fallbackCopy(html){
+  showHtmlPanel(html);
+  const output=document.getElementById('htmlOutput');
+  try{
+    output.select();
+    document.execCommand('copy');
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✓ 복사됨';
+    setTimeout(()=>btn.textContent='티스토리 HTML 복사',2000);
+  } catch(e){
+    // 수동 복사 안내는 패널이 표시되므로 충분
+  }
+}
+
+function selectAll(){
+  const output=document.getElementById('htmlOutput');
+  output.focus();
+  output.select();
+  try{document.execCommand('copy');
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✓ 복사됨';
+    setTimeout(()=>btn.textContent='티스토리 HTML 복사',2000);
+  }catch(e){}
+}
+
+initSwatches();
+</script>
+</body>
+</html>
