@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>채팅 변환기</title>
+<title>채팅 변환기 — txt → 티스토리</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500&display=swap');
 
@@ -194,11 +194,6 @@ textarea:focus, select:focus { border-color: var(--border2); }
 .sw.on { border-color: var(--text); }
 
 /* ── Hex inputs ──────────────────────────── */
-.hex-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
-}
 .hex-item {
   display: flex; flex-direction: column; gap: 4px;
 }
@@ -220,6 +215,27 @@ textarea:focus, select:focus { border-color: var(--border2); }
   font-family: 'SF Mono', 'Menlo', monospace;
 }
 .hex-inp:focus { border-color: var(--border2); }
+
+/* ── URL row ─────────────────────────────── */
+.url-row { display: flex; flex-direction: column; gap: 4px; margin-top: -4px; }
+.url-row label { font-size: 11px; color: var(--text3); }
+.url-input-row { display: flex; align-items: center; gap: 5px; }
+.url-input-row input {
+  flex: 1; font-size: 12px; padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: 'Noto Sans KR', sans-serif;
+  min-width: 0;
+}
+.url-input-row input:focus { border-color: var(--border2); }
+.url-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 13px; padding: 2px 4px; flex-shrink: 0;
+}
+.url-clear:hover { color: var(--text); }
 .apply-btn {
   width: 100%;
   padding: 7px;
@@ -380,6 +396,13 @@ textarea:focus, select:focus { border-color: var(--border2); }
           <select id="nameA" onchange="reRender()"><option value="">-- 내 이름 선택 --</option></select>
         </div>
       </div>
+      <div class="url-row">
+        <label>이미지 URL (Imgur 등)</label>
+        <div class="url-input-row">
+          <input type="text" id="urlA" placeholder="https://i.imgur.com/xxxxx.jpg" oninput="onUrlInput('A')">
+          <button class="url-clear" onclick="clearUrl('A')">✕</button>
+        </div>
+      </div>
 
       <div class="sec">상대방 이름 (왼쪽 버블)</div>
       <div class="profile-row">
@@ -388,37 +411,44 @@ textarea:focus, select:focus { border-color: var(--border2); }
           <select id="nameB" onchange="reRender()"><option value="">-- 상대방 이름 선택 --</option></select>
         </div>
       </div>
+      <div class="url-row">
+        <label>이미지 URL (Imgur 등)</label>
+        <div class="url-input-row">
+          <input type="text" id="urlB" placeholder="https://i.imgur.com/xxxxx.jpg" oninput="onUrlInput('B')">
+          <button class="url-clear" onclick="clearUrl('B')">✕</button>
+        </div>
+      </div>
 
       <div class="sec">버블 색상</div>
       <div class="sw-row" id="swatches"></div>
 
-      <div class="hex-grid">
+      <div style="display:flex;flex-direction:column;gap:6px;">
         <div class="hex-item">
           <label>나 버블</label>
           <div class="hex-item-row">
             <div class="hex-dot" id="hDotMe"></div>
-            <input class="hex-inp" id="hexMe" type="text" placeholder="#F4B8C8" maxlength="7" oninput="onHexInput('me')">
-          </div>
-        </div>
-        <div class="hex-item">
-          <label>상대 버블</label>
-          <div class="hex-item-row">
-            <div class="hex-dot" id="hDotOther"></div>
-            <input class="hex-inp" id="hexOther" type="text" placeholder="#FCDFE7" maxlength="7" oninput="onHexInput('other')">
+            <input class="hex-inp" id="hexMe" type="text" placeholder="#F4B8C8" maxlength="7" oninput="onHexInput('me')" style="width:100%">
           </div>
         </div>
         <div class="hex-item">
           <label>나 텍스트</label>
           <div class="hex-item-row">
             <div class="hex-dot" id="hDotTxtMe"></div>
-            <input class="hex-inp" id="hexTxtMe" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtMe')">
+            <input class="hex-inp" id="hexTxtMe" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtMe')" style="width:100%">
+          </div>
+        </div>
+        <div class="hex-item">
+          <label>상대 버블</label>
+          <div class="hex-item-row">
+            <div class="hex-dot" id="hDotOther"></div>
+            <input class="hex-inp" id="hexOther" type="text" placeholder="#FCDFE7" maxlength="7" oninput="onHexInput('other')" style="width:100%">
           </div>
         </div>
         <div class="hex-item">
           <label>상대 텍스트</label>
           <div class="hex-item-row">
             <div class="hex-dot" id="hDotTxtOther"></div>
-            <input class="hex-inp" id="hexTxtOther" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtOther')">
+            <input class="hex-inp" id="hexTxtOther" type="text" placeholder="자동" maxlength="7" oninput="onHexInput('txtOther')" style="width:100%">
           </div>
         </div>
       </div>
@@ -654,15 +684,35 @@ function updateNameSelects(){
 function loadAv(p,input){
   const file=input.files[0];if(!file)return;
   const r=new FileReader();
-  r.onload=e=>{
-    avData[p]=e.target.result;
-    const wrap=document.getElementById('av'+p+'-wrap');
-    document.getElementById('av'+p+'-icon').style.display='none';
-    let img=wrap.querySelector('img');
-    if(!img){img=document.createElement('img');wrap.insertBefore(img,wrap.querySelector('input'));}
-    img.src=e.target.result;
-  };
+  r.onload=e=>{ avData[p]=e.target.result; setAvPreview(p,e.target.result); if(parsedMsgs.length)renderChat(parsedMsgs); };
   r.readAsDataURL(file);
+}
+
+function onUrlInput(p){
+  const url=document.getElementById('url'+p).value.trim();
+  if(!url){clearUrl(p);return;}
+  avData[p]=url;
+  setAvPreview(p,url);
+  if(parsedMsgs.length)renderChat(parsedMsgs);
+}
+
+function clearUrl(p){
+  document.getElementById('url'+p).value='';
+  avData[p]=null;
+  const wrap=document.getElementById('av'+p+'-wrap');
+  const img=wrap.querySelector('img');
+  if(img)img.remove();
+  document.getElementById('av'+p+'-icon').style.display='';
+  if(parsedMsgs.length)renderChat(parsedMsgs);
+}
+
+function setAvPreview(p,src){
+  const wrap=document.getElementById('av'+p+'-wrap');
+  document.getElementById('av'+p+'-icon').style.display='none';
+  let img=wrap.querySelector('img');
+  if(!img){img=document.createElement('img');wrap.insertBefore(img,wrap.querySelector('input'));}
+  img.src=src;
+  img.onerror=()=>{img.remove();document.getElementById('av'+p+'-icon').style.display='';avData[p]=null;alert('이미지를 불러올 수 없어요.\nURL을 다시 확인해 주세요.');};
 }
 
 function convert(){
